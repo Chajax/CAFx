@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FxRxS — Field · Room · Space</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="ambient"></canvas>
+<canvas id="particles"></canvas>
+<div class="wavecol left" id="wavecolIn"><canvas id="waveIn"></canvas></div>
+<div class="wavecol right" id="wavecolOut"><canvas id="waveOut"></canvas></div>
+<div class="panel">
+  <div class="eyebrow" id="eyebrow">Open-air distance renderer</div>
+  <h1><span id="h1name">Field</span><span>.</span></h1>
+  <p class="sub">Drop in any audio and walk it away from the stage. Distance rolls off the highs, swells the low end, soaks the tail in open-air reverb, and folds the crowd into the gaps — the way sound actually carries across a festival ground at night.</p>
+
+  <div class="card" id="fxrsPanel">
+    <div class="drop-label">FxRxS · Engine</div>
+    <div class="engine-wheel-wrap">
+      <svg id="engineWheel" viewBox="0 0 200 200" aria-label="Engine selector"></svg>
+    </div>
+    <div class="engine-meta">
+      <div class="engine-name" id="engineName">Field</div>
+      <div class="engine-tag" id="engineTag">Open-air distance renderer</div>
+      <div class="engine-soon hidden" id="engineSoon">This engine isn't built yet — coming soon.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="drop-label">01 · Source — the stage</div>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="audio/*">
+      <strong>Drop an audio file</strong>
+      <em>or tap to browse — wav, mp3, flac, m4a</em>
+    </label>
+    <div class="live-in-row">
+      <button type="button" id="liveInBtn" class="live-in-btn">🎙 Use live input — mic / line-in</button>
+      <span class="live-in-note" id="liveInNote">Processes your mic or line-in in real time. Use headphones to avoid feedback.</span>
+    </div>
+    <div class="loaded hidden" id="loaded"></div>
+
+    <div id="crowdSection">
+      <div class="crowd-head">
+        <span class="drop-label" style="margin:0">02 · Crowd beds — optional</span>
+        <label class="crowd-toggle">
+          <input type="checkbox" id="crowdOn" checked>
+          <span class="ct-track"><span class="ct-knob"></span></span>
+          <span class="ct-txt" id="crowdOnTxt">Crowd on</span>
+        </label>
+      </div>
+      <label class="drop crowd" id="dropCrowd">
+        <input type="file" id="fileCrowd" accept="audio/*" multiple>
+        <strong>Drop crowd recordings</strong>
+        <em>add as many as you like — cheers, ambience, field noise</em>
+      </label>
+      <div class="bed-list" id="bedList"></div>
+      <div class="crowd-cap" id="crowdCap">The active bed loops under the track and follows distance. Pick one below. Turn the crowd off if your track already has crowd baked in.</div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="controls">
+    <div class="field field-only">
+      <svg viewBox="0 0 560 120" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="stageGlow" cx="0" cy="0.5" r="1">
+            <stop offset="0%" stop-color="var(--stage)" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="var(--stage)" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="560" height="120" fill="url(#stageGlow)"/>
+        <!-- stage -->
+        <rect x="6" y="44" width="14" height="32" rx="2" fill="var(--stage)"/>
+        <line x1="13" y1="44" x2="13" y2="20" stroke="var(--stage-dim)" stroke-width="2"/>
+        <!-- ground line -->
+        <line x1="0" y1="92" x2="560" y2="92" stroke="var(--line)" stroke-width="1"/>
+        <!-- wavefronts -->
+        <g id="waves"></g>
+        <!-- listener -->
+        <g class="listener" id="listenerG">
+          <circle cx="0" cy="68" r="5" fill="var(--ink)"/>
+          <circle cx="0" cy="68" r="11" fill="none" stroke="var(--far)" stroke-width="1.5" opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="readout field-only">
+      <div class="dist"><span id="distNum">40</span><em> m</em></div>
+      <div class="tag" id="zoneTag">FRONT<br>OF HOUSE</div>
+    </div>
+
+    <input class="field-only" type="range" id="dist" min="2" max="800" value="40" step="1">
+    <div class="scale field-only"><span>2 m · on the rail</span><span>800 m · car park</span></div>
+
+    <div class="eq field-only">
+      <div class="rig-head">Input EQ — shapes the source before distance</div>
+      <div class="eq-bands">
+        <div class="eq-scale"><span>+18</span><span>+9</span><span>0</span><span>−9</span><span>−18</span></div>
+        <div class="eq-band">
+          <div class="eq-slot" id="eq0" data-i="0"><div class="eq-fill"></div><div class="eq-thumb"></div></div>
+          <span class="eq-val" id="eq0v">0</span>
+          <span class="eq-lbl">80</span>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slot" id="eq1" data-i="1"><div class="eq-fill"></div><div class="eq-thumb"></div></div>
+          <span class="eq-val" id="eq1v">0</span>
+          <span class="eq-lbl">250</span>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slot" id="eq2" data-i="2"><div class="eq-fill"></div><div class="eq-thumb"></div></div>
+          <span class="eq-val" id="eq2v">0</span>
+          <span class="eq-lbl">1k</span>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slot" id="eq3" data-i="3"><div class="eq-fill"></div><div class="eq-thumb"></div></div>
+          <span class="eq-val" id="eq3v">0</span>
+          <span class="eq-lbl">4k</span>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slot" id="eq4" data-i="4"><div class="eq-fill"></div><div class="eq-thumb"></div></div>
+          <span class="eq-val" id="eq4v">0</span>
+          <span class="eq-lbl">10k</span>
+        </div>
+      </div>
+      <div class="eq-hint">Drag or click · double-click to reset to 0</div>
+    </div>
+
+    <div class="rig field-only">
+      <div class="rig-head">The rig — how the PA is driven</div>
+
+      <div class="pa">
+        <div class="pa-top">
+          <span class="pa-label">PA level</span>
+          <span class="pa-val" id="paVal">100 dB SPL</span>
+        </div>
+        <input type="range" id="pa" min="85" max="115" value="100" step="1">
+        <div class="scale"><span>85 · club rig</span><span>115 · main stage wall</span></div>
+      </div>
+
+      <div class="tune-label">Speaker tuning</div>
+      <div class="tunes" id="tunes">
+        <button class="tune active" data-tune="flat">Flat / live band</button>
+        <button class="tune" data-tune="dance">Dance · scooped</button>
+        <button class="tune" data-tune="bass">Bass · sub-heavy</button>
+        <button class="tune" data-tune="vocal">Vocal · mid-forward</button>
+      </div>
+      <div class="tune-desc" id="tuneDesc">Even response — what a well-balanced festival system aims for.</div>
+
+      <div class="boosts">
+        <div class="boost">
+          <div class="pa-top">
+            <span class="pa-label">Drum boost
+              <label class="mini-toggle"><input type="checkbox" id="drumOn" checked><span class="mt-track"><span class="mt-knob"></span></span></label>
+            </span>
+            <span class="pa-val" id="drumVal">0 dB</span>
+          </div>
+          <input type="range" id="drum" min="0" max="12" value="0" step="0.5">
+          <div class="scale"><span>off</span><span>+12 dB kick & punch</span></div>
+        </div>
+        <div class="boost">
+          <div class="pa-top">
+            <span class="pa-label">Crowd boost</span>
+            <span class="pa-val" id="crowdBoostVal">0 dB</span>
+          </div>
+          <input type="range" id="crowdBoost" min="-12" max="12" value="0" step="0.5">
+          <div class="scale"><span>−12 dB</span><span>+12 dB louder crowd</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="atmos field-only">
+      <div class="rig-head">Atmosphere — the air the sound travels through</div>
+
+      <div class="wx-row">
+        <input type="text" id="wxPlace" placeholder="City or place — e.g. Reykjavík" autocomplete="off">
+        <button type="button" id="wxFetch" class="tune">⛅ Use live weather</button>
+      </div>
+      <div class="wx-status" id="wxStatus">Pulls the current conditions for a place and sets the atmosphere below. Needs an internet connection.</div>
+
+      <div class="env-grid">
+        <div class="env">
+          <div class="env-top"><span>Air / clarity</span><span class="env-v" id="clarityV">0</span></div>
+          <input type="range" id="clarity" min="-100" max="100" value="0" step="1">
+          <div class="scale"><span>underwater</span><span>crisp & open</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Temperature</span><span class="env-v" id="tempV">20°C</span></div>
+          <input type="range" id="temp" min="-10" max="40" value="20" step="1">
+          <div class="scale"><span>−10°C</span><span>40°C</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Humidity</span><span class="env-v" id="humV">50%</span></div>
+          <input type="range" id="hum" min="0" max="100" value="50" step="1">
+          <div class="scale"><span>dry · crisp highs gone faster</span><span>humid · highs carry</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Air pressure</span><span class="env-v" id="presV">1013 hPa</span></div>
+          <input type="range" id="pres" min="850" max="1050" value="1013" step="1">
+          <div class="scale"><span>850 · high altitude</span><span>1050 · sea level</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Crowd density</span><span class="env-v" id="densV">50%</span></div>
+          <input type="range" id="dens" min="0" max="100" value="50" step="1">
+          <div class="scale"><span>empty field</span><span>packed · deeper notch</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Wind speed</span><span class="env-v" id="windV">0 m/s</span></div>
+          <input type="range" id="wind" min="0" max="20" value="0" step="0.5">
+          <div class="scale"><span>still</span><span>20 m/s · gale</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Wind direction</span><span class="env-v" id="windDirV">downwind</span></div>
+          <input type="range" id="windDir" min="0" max="180" value="0" step="5">
+          <div class="scale"><span>downwind · louder</span><span>upwind · shadow</span></div>
+        </div>
+
+        <div class="env">
+          <div class="env-top"><span>Gusts / turbulence</span><span class="env-v" id="gustV">0%</span></div>
+          <input type="range" id="gust" min="0" max="100" value="0" step="1">
+          <div class="scale"><span>steady</span><span>gusty · wandering</span></div>
+        </div>
+
+        <div class="env env-weather">
+          <div class="env-top"><span>Wind noise</span><span class="env-v" id="windNoiseV">0%</span></div>
+          <input type="range" id="windNoise" min="0" max="100" value="0" step="1">
+          <div class="scale"><span>silent</span><span>howling · scales with wind</span></div>
+        </div>
+
+        <div class="env env-weather">
+          <div class="env-top"><span>Rain</span><span class="env-v" id="rainV">0%</span></div>
+          <input type="range" id="rain" min="0" max="100" value="0" step="1">
+          <div class="scale"><span>dry</span><span>downpour</span></div>
+        </div>
+
+        <div class="env env-weather">
+          <div class="env-top"><span>Thunderstorm</span><span class="env-v" id="thunderV">off</span></div>
+          <input type="range" id="thunder" min="0" max="100" value="0" step="1">
+          <div class="scale"><span>off · distant</span><span>overhead · frequent</span></div>
+        </div>
+      </div>
+      <div class="env-note" id="envNote">Still, mild air. Move the controls to reshape how the field carries the sound.</div>
+
+      <div class="tune-label" style="margin-top:18px">Diffuse field — the late, scattered energy</div>
+      <div class="tunes" id="dfields">
+        <button class="tune dfield active" data-df="current">Current · open tail</button>
+        <button class="tune dfield" data-df="spectral">Spectral · env-reactive</button>
+        <button class="tune dfield" data-df="reflections">Reflections · distant echoes</button>
+        <button class="tune dfield" data-df="minimal">Minimal · short &amp; dark</button>
+      </div>
+      <div class="tune-desc" id="dfieldDesc">The original open-air wash — one long, even diffuse tail (the look you had before).</div>
+    </div>
+
+    <div class="markers hidden field-only" id="markersPanel">
+      <div class="rig-head">WAV markers — found in the track</div>
+      <div class="marker-strip" id="markerStrip"></div>
+      <div class="marker-count" id="markerCount"></div>
+
+      <div class="marker-mode" id="markerMode">
+        <button class="mm active" data-mode="cheer">Cheers (one-shot)</button>
+        <button class="mm" data-mode="crowd">Crowd region (span)</button>
+      </div>
+
+      <div class="marker-act" id="cheerImportRow">
+        <select id="markerSound">
+          <option value="roar">Crowd roar</option>
+          <option value="whoop">Whoops & whistles</option>
+          <option value="applause">Applause burst</option>
+          <option value="airhorn">Air horn</option>
+        </select>
+        <button id="markerImport" class="add-cheer">Import all as cheers</button>
+      </div>
+
+      <div class="marker-act hidden" id="regionAddRow">
+        <label class="msel">Start <select id="regStart"></select></label>
+        <label class="msel">End <select id="regEnd"></select></label>
+        <button id="regionAdd" class="add-cheer">+ Add region</button>
+      </div>
+      <div class="region-list" id="regionList"></div>
+    </div>
+
+    <div class="cheers field-only">
+      <div class="rig-head">Crew cheers — dropped on the timeline</div>
+      <div class="cheer-add">
+        <select id="cheerKind">
+          <optgroup label="Built-in">
+            <option value="roar">Crowd roar</option>
+            <option value="whoop">Whoops & whistles</option>
+            <option value="applause">Applause burst</option>
+            <option value="airhorn">Air horn</option>
+          </optgroup>
+          <optgroup label="Uploaded clips" id="uploadedGroup"></optgroup>
+          <option value="__upload__">＋ Upload new clip…</option>
+        </select>
+        <input type="text" id="cheerTime" placeholder="0:00.0" inputmode="decimal">
+        <button id="cheerAdd" class="add-cheer">+ Add</button>
+        <input type="file" id="cheerFile" accept="audio/*" hidden>
+      </div>
+      <div class="cheer-list" id="cheerList"></div>
+      <div class="cheer-empty" id="cheerEmpty">No cheers yet. Pick a sound or upload a clip, set a timestamp like <b>1:24.5</b>, and add it. Each one gets processed by distance + rig just like the music.</div>
+    </div>
+
+    <div class="space-only" id="spaceControls">
+      <div class="rig-head">Space — pick a world</div>
+      <div class="tunes" id="spaceModes">
+        <button class="tune active" data-sm="nebula">Nebula · lush drift</button>
+        <button class="tune" data-sm="alien">Alien planet · exotic</button>
+        <button class="tune" data-sm="anomalies">Anomalies · unstable</button>
+        <button class="tune" data-sm="chamber">Chamber · particle field</button>
+      </div>
+      <div class="tune-desc" id="spaceDesc">A vast, weightless cloud — huge shimmering reverb, a deep sub bloom, everything slowly drifting.</div>
+      <div class="pa" style="margin-top:14px">
+        <div class="pa-top"><span class="pa-label">Intensity</span><span class="pa-val" id="spaceAmtVal">60%</span></div>
+        <input type="range" id="spaceAmt" min="0" max="100" value="60" step="1">
+        <div class="scale"><span>dry · clean</span><span>full effect</span></div>
+      </div>
+      <div class="pa" style="margin-top:10px">
+        <div class="pa-top"><span class="pa-label">Output</span><span class="pa-val" id="spaceVolVal">90%</span></div>
+        <input type="range" id="spaceVol" min="0" max="100" value="90" step="1">
+        <div class="scale"><span>quiet</span><span>loud</span></div>
+      </div>
+      <div id="nebulaCtl">
+        <div class="pa" style="margin-top:12px">
+          <div class="pa-top"><span class="pa-label">Density</span><span class="pa-val" id="nebDensityVal">55%</span></div>
+          <input type="range" id="nebDensity" min="0" max="100" value="55" step="1">
+          <div class="scale"><span>sparse · grainy</span><span>dense · smooth</span></div>
+        </div>
+        <div class="pa" style="margin-top:10px">
+          <div class="pa-top"><span class="pa-label">Movement</span><span class="pa-val" id="nebMovementVal">45%</span></div>
+          <input type="range" id="nebMovement" min="0" max="100" value="45" step="1">
+          <div class="scale"><span>still</span><span>swirling · scattered</span></div>
+        </div>
+      </div>
+      <div id="anomCtl">
+        <div class="xy-wrap">
+          <div class="pa-label" style="margin-bottom:6px">Warp × Time reversal — drag the point</div>
+          <canvas id="xyPad" class="xy-pad"></canvas>
+          <div class="xy-read">
+            <span>Warp / stretch <b id="warpAmtVal">50%</b></span>
+            <span>Time reversal <b id="revAmtVal">30%</b></span>
+          </div>
+        </div>
+        <button class="tune chaos-btn" id="revLatchBtn">⇄ Latch to last — off</button>
+        <div class="fx-route-hint" style="margin-top:0">On live input: holds the last sound and keeps replaying it reversed while the input is silent.</div>
+        <button class="tune chaos-btn" id="chaosBtn">⚛ Chaos pendulum — off</button>
+        <canvas id="chaosCanvas" class="chaos-canvas"></canvas>
+        <div class="xy-wrap">
+          <div class="pa-label" style="margin-bottom:6px">Ring × Glitch — the other anomalies</div>
+          <canvas id="xyPad2" class="xy-pad"></canvas>
+          <div class="xy-read">
+            <span>Ring / metal <b id="anomRingVal">50%</b></span>
+            <span>Glitch / gate <b id="anomGlitchVal">45%</b></span>
+          </div>
+        </div>
+        <button class="tune chaos-btn" id="chaosBtn2">⚛ Chaos pendulum — off</button>
+        <canvas id="chaosCanvas2" class="chaos-canvas"></canvas>
+        <div class="tune-label" style="margin-top:12px">Routing — stage per effect</div>
+        <div class="fx-route">
+          <label>Ring<select id="rtRing" data-fx="ring"><option value="0">Off</option><option value="1" selected>Stage 1</option><option value="2">Stage 2</option><option value="3">Stage 3</option></select></label>
+          <label>Filter<select id="rtFilter" data-fx="filter"><option value="0">Off</option><option value="1" selected>Stage 1</option><option value="2">Stage 2</option><option value="3">Stage 3</option></select></label>
+          <label>Glitch<select id="rtGlitch" data-fx="glitch"><option value="0">Off</option><option value="1" selected>Stage 1</option><option value="2">Stage 2</option><option value="3">Stage 3</option></select></label>
+        </div>
+        <div class="fx-route-hint">Same stage = parallel · higher stage = later in the chain · Off = bypass. (e.g. Ring &amp; Filter on Stage 1, Glitch on Stage 2 = the two in parallel into Glitch.)</div>
+      </div>
+      <div id="alienCtl">
+        <div class="pa-label" style="margin-bottom:6px">Atmosphere — the planet's gas mix shapes every effect</div>
+        <canvas id="atmoCanvas" class="atmo-canvas"></canvas>
+        <div id="atmoReadout" class="atmo-readout"></div>
+        <button class="tune" id="genAtmoBtn" style="width:100%;margin-top:10px">⟳ Generate a new atmosphere</button>
+      </div>
+      <div id="chamberCtl">
+        <div class="pa-label" style="margin-bottom:6px" id="chRolesLabel">Confined 3D field — particles are speakers, corners are microphones</div>
+        <canvas id="chamberCanvas" class="chaos-canvas"></canvas>
+        <div id="chFallbackNote" class="ch-fallback hidden">⚠ Physics worklet unavailable — running the simplified fallback. Reverse-roles &amp; round-robin mic modes are inactive in this mode.</div>
+        <button class="tune chaos-btn" id="chReverseBtn" style="margin-top:10px">⇄ Reverse roles — off</button>
+        <button class="tune chaos-btn" id="chMicModeBtn" style="margin-top:8px">◉ Mics — all at once</button>
+        <div id="chMicRRControls" class="dim" style="margin-top:8px">
+          <div class="pa" id="chMicGroupRow">
+            <div class="pa-top"><span class="pa-label">Round-robin group size</span><span class="pa-val" id="chMicGroupVal">1</span></div>
+            <input type="range" id="chMicGroup" min="1" max="49" value="1" step="1">
+            <div class="scale"><span>1 mic</span><span id="chMicGroupMax">up to n−1</span></div>
+          </div>
+          <div class="pa" style="margin-top:8px">
+            <div class="pa-top"><span class="pa-label">Switch speed</span><span class="pa-val" id="chMicSpeedVal">70%</span></div>
+            <input type="range" id="chMicSpeed" min="0" max="100" value="70" step="1">
+            <div class="scale"><span>slow</span><span>fast</span></div>
+          </div>
+          <div class="pa" style="margin-top:8px">
+            <div class="pa-top"><span class="pa-label">Transition smoothness</span><span class="pa-val" id="chMicSmoothVal">30%</span></div>
+            <input type="range" id="chMicSmooth" min="0" max="100" value="30" step="1">
+            <div class="scale"><span>hard cut</span><span>smooth crossfade</span></div>
+          </div>
+        </div>
+        <div class="pa" style="margin-top:10px">
+          <div class="pa-top"><span class="pa-label">Corners</span><span class="pa-val" id="chCornersVal">6</span></div>
+          <input type="range" id="chCorners" min="4" max="50" value="6" step="1">
+          <div class="scale"><span>4</span><span>50</span></div>
+        </div>
+        <div class="pa" style="margin-top:10px">
+          <div class="pa-top"><span class="pa-label">Size</span><span class="pa-val" id="chSizeVal">55%</span></div>
+          <input type="range" id="chSize" min="0" max="100" value="55" step="1">
+          <div class="scale"><span>tight</span><span>vast</span></div>
+        </div>
+        <div class="pa" style="margin-top:10px">
+          <div class="pa-top"><span class="pa-label">Density</span><span class="pa-val" id="chDensityVal">50%</span></div>
+          <input type="range" id="chDensity" min="0" max="100" value="50" step="1">
+          <div class="scale"><span>few</span><span>swarm</span></div>
+        </div>
+        <div class="pa" style="margin-top:10px">
+          <div class="pa-top"><span class="pa-label">Movement</span><span class="pa-val" id="chMoveVal">45%</span></div>
+          <input type="range" id="chMove" min="0" max="100" value="45" step="1">
+          <div class="scale"><span>still</span><span>frantic</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="room-only" id="roomControls">
+      <div class="pa-label" style="margin-bottom:6px">Ray-traced room — rays leave the speaker, bounce off the walls losing energy by material, and the impulse response they build is convolved with your audio.</div>
+      <canvas id="roomCanvas" class="chaos-canvas"></canvas>
+      <div id="roomBakeNote" class="wx-status">Set the room up — the impulse response bakes automatically.</div>
+
+      <div class="tune-label" style="margin-top:4px">Room shape</div>
+      <div class="tunes" id="roomShape">
+        <button class="tune active" data-shape="box">Shoebox</button>
+        <button class="tune" data-shape="custom">Custom floor-plan</button>
+      </div>
+
+      <div id="roomBoxDims">
+        <div class="pa" style="margin-top:10px"><div class="pa-top"><span class="pa-label">Width</span><span class="pa-val" id="roomWVal">9 m</span></div>
+          <input type="range" id="roomWSl" min="2" max="40" value="9" step="0.5"></div>
+        <div class="pa" style="margin-top:8px"><div class="pa-top"><span class="pa-label">Length</span><span class="pa-val" id="roomLVal">12 m</span></div>
+          <input type="range" id="roomLSl" min="2" max="60" value="12" step="0.5"></div>
+      </div>
+      <div id="roomCustom" style="display:none">
+        <div class="tunes room-presets" id="roomPresets" style="margin-top:10px;grid-template-columns:1fr 1fr 1fr 1fr">
+          <button class="tune" data-preset="rect">▭ Rect</button>
+          <button class="tune" data-preset="ell">◣ L-shape</button>
+          <button class="tune" data-preset="hex">⬡ Hex</button>
+          <button class="tune" data-preset="oct">⯃ Oct</button>
+        </div>
+        <div class="wx-status" style="margin:6px 0 0">Custom shape — click an edge to add a vertex · double-click a vertex to remove (min 3).</div>
+      </div>
+      <div class="pa" style="margin-top:8px"><div class="pa-top"><span class="pa-label">Height</span><span class="pa-val" id="roomHVal">4 m</span></div>
+        <input type="range" id="roomHSl" min="2" max="20" value="4" step="0.5"></div>
+
+      <div class="tune-label" style="margin-top:12px">Placement — click &amp; drag the <span style="color:#ffd9a0">speakers</span> &amp; <span style="color:var(--accent)">stereo mic</span> (top-down · 🔒 to lock)</div>
+      <canvas id="roomPlanCanvas" class="chaos-canvas" style="aspect-ratio:1/1"></canvas>
+
+      <div class="tune-label" style="margin-top:14px">Wall materials</div>
+      <div class="room-mats" id="roomMats">
+        <label>West<select id="matW" data-wall="0"></select></label>
+        <label>East<select id="matE" data-wall="1"></select></label>
+        <label>South<select id="matS" data-wall="2"></select></label>
+        <label>North<select id="matN" data-wall="3"></select></label>
+        <label>Floor<select id="matF" data-wall="4"></select></label>
+        <label>Ceiling<select id="matC" data-wall="5"></select></label>
+      </div>
+      <div class="room-mats" id="roomMatsCustom" style="display:none"></div>
+
+      <div class="tune-label" style="margin-top:14px">Speakers <span id="roomSpkCount" style="color:var(--ink-dim);font-weight:400"></span></div>
+      <div class="room-spk-list" id="roomSpkList"></div>
+      <div class="room-xyz" style="grid-template-columns:1fr;margin-top:6px">
+        <div><span class="rl">Selected speaker height <b id="srcZVal">35%</b></span><input type="range" id="srcZ" min="0" max="100" value="35"></div>
+      </div>
+      <div class="tune-label" style="margin-top:14px">Stereo microphone</div>
+      <div class="room-spk-list">
+        <span class="room-spk active" style="cursor:default">🎙 Stereo mic <span class="lockbtn" id="micLock">🔓</span></span>
+      </div>
+      <div class="room-xyz" style="grid-template-columns:1fr;margin-top:6px">
+        <div><span class="rl">Mic height <b id="lisZVal">32%</b></span><input type="range" id="lisZ" min="0" max="100" value="32"></div>
+      </div>
+
+      <div class="pa" style="margin-top:14px"><div class="pa-top"><span class="pa-label">Detail — rays · bounces</span><span class="pa-val" id="roomQualVal">55%</span></div>
+        <input type="range" id="roomQual" min="0" max="100" value="55"><div class="scale"><span>fast</span><span>dense</span></div></div>
+      <div class="pa" style="margin-top:8px"><div class="pa-top"><span class="pa-label">Reverb mix</span><span class="pa-val" id="roomWetVal">42%</span></div>
+        <input type="range" id="roomWetSl" min="0" max="100" value="42"><div class="scale"><span>dry</span><span>wet</span></div></div>
+      <div class="pa" style="margin-top:8px"><div class="pa-top"><span class="pa-label">Output</span><span class="pa-val" id="roomVolVal">90%</span></div>
+        <input type="range" id="roomVolSl" min="0" max="100" value="90"><div class="scale"><span>quiet</span><span>loud</span></div></div>
+    </div>
+
+    <div class="btns">
+      <button id="play" class="play" disabled>▶ Preview</button>
+      <button id="render" disabled>Render & download</button>
+    </div>
+    <div class="note" id="note">Move the slider live while previewing. “Render” bakes the current distance, rig, and all cheers into a downloadable WAV.</div>
+  </div>
+</div>
+
+<script src="audio-engine.js"></script>
+<script src="engine-field.js"></script>
+<script src="engine-room.js"></script>
+<script src="engine-space.js"></script>
+<script src="gui.js"></script>
+</body>
+</html>
