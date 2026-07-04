@@ -18,6 +18,8 @@
    ===================================================================== */
 const ROOM_MATERIALS = {
   "concrete": { "name": "Rough concrete",     "a": [0.02, 0.03, 0.03, 0.03, 0.04, 0.07] },
+  "ultraabsorbent": { "name": "Ultra Absorbent Material",     "a": [1, 1, 1, 1, 1, 1] },
+  "ultrareflective": { "name": "Ultra Reflective Material",     "a": [0, 0, 0, 0, 0, 0] },
   "painted":  { "name": "Painted concrete",   "a": [0.01, 0.01, 0.02, 0.02, 0.02, 0.03] },
   "brick":    { "name": "Unglazed brick",     "a": [0.03, 0.03, 0.03, 0.04, 0.05, 0.07] },
   "plaster":  { "name": "Plaster on lath",    "a": [0.14, 0.10, 0.06, 0.05, 0.04, 0.03] },
