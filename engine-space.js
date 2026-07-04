@@ -664,6 +664,7 @@ ENGINES.space = {
   id: 'space',
   name: 'Space',
   tagline: 'Nebula · alien · anomalies',
+  blurb: 'Drop in any audio and send it somewhere that was never a place. Four worlds — a drifting reverb Nebula, an alien planet’s shifting atmosphere, unstable time Anomalies, and a confined particle Chamber — each reshaping the sound with its own physics. No stage, no distance; just space.',
   color: '#4d8dff',          // blue — drives accent + ambient star scatter
   glow:  '#a9caff',
   implemented: true,

@@ -85,6 +85,12 @@ function roomFracToWorld(f){ const g=roomGeom(), bb=roomBBox(g.poly);
   return [c[0], c[1], (0.06+0.88*f.z)*g.H]; }
 function roomSrcsM(){ return roomSrcs.map(roomFracToWorld); }
 function roomLisM(){ return roomFracToWorld(roomLis); }
+// stereo microphone: two capsules at the listener ± half the separation, along an axis
+// rotated by roomMicAngle in the floor plane. Used by the tracers, coherent arrivals + viz.
+let roomMicAngle=0;     // stereo-axis rotation, degrees (0 = along +X)
+let roomMicSep=0.20;    // L/R capsule separation, metres
+function roomMicEars(){ const c=roomLisM(), half=roomMicSep/2, a=roomMicAngle*Math.PI/180, ux=Math.cos(a), uy=Math.sin(a);
+  return [ [c[0]-half*ux, c[1]-half*uy, c[2]], [c[0]+half*ux, c[1]+half*uy, c[2]] ]; }
 function roomRayCount(){ return Math.round(6000 + roomQuality/100*40000); }   // total budget (split across speakers)
 function roomMaxBounces(){ return Math.round(18 + roomQuality/100*46); }
 function roomIRSeconds(){ return 1.6; }
@@ -124,8 +130,7 @@ function roomTraceCPU(SR){
   const g=roomGeom(), poly=g.poly, np=poly.length, H=g.H, bb=roomBBox(poly);
   const nBins=Math.ceil(roomIRSeconds()*SR);
   const vol=Math.max(1,(bb.maxx-bb.minx)*(bb.maxy-bb.miny)*H);
-  const ear=Math.min(0.12*(bb.maxx-bb.minx),0.18), lc=roomLisM();
-  const lis=[[lc[0]-ear,lc[1],lc[2]],[lc[0]+ear,lc[1],lc[2]]];
+  const lis=roomMicEars();                        // stereo capsules (rotation + separation)
   const rad=Math.max(0.25, Math.cbrt(vol)*0.06), r2=rad*rad;
   const srcs=roomSrcsM(), nSpk=srcs.length;
   const perSpk=Math.max(300, Math.ceil(roomRayCount()/nSpk)), maxB=roomMaxBounces();
@@ -298,11 +303,11 @@ async function roomTraceGPU(SR){
     const nBins=Math.ceil(roomIRSeconds()*SR);
     const srcs=roomSrcsM(), nSpk=srcs.length;
     const perSpk=Math.max(300, Math.ceil(roomRayCount()*6/nSpk)), total=perSpk*nSpk, maxB=roomMaxBounces();
-    const ear=Math.min(0.12*roomW,0.18), lc=roomLisM(), rad=Math.max(0.25, Math.cbrt(roomW*roomL*roomH)*0.06);
+    const ears=roomMicEars(), rad=Math.max(0.25, Math.cbrt(roomW*roomL*roomH)*0.06);
     const uf=new Float32Array(20), uu=new Uint32Array(uf.buffer);
     uf[0]=roomW;uf[1]=roomL;uf[2]=roomH;uf[3]=ROOM_C; uf[4]=2; uf[7]=rad;   // rad.x = skipB (box: direct+1st order are coherent)
-    uf[8]=lc[0]-ear;uf[9]=lc[1];uf[10]=lc[2];uf[11]=SR;
-    uf[12]=lc[0]+ear;uf[13]=lc[1];uf[14]=lc[2];uf[15]=0.30;
+    uf[8]=ears[0][0];uf[9]=ears[0][1];uf[10]=ears[0][2];uf[11]=SR;
+    uf[12]=ears[1][0];uf[13]=ears[1][1];uf[14]=ears[1][2];uf[15]=0.30;
     uu[16]=perSpk;uu[17]=maxB;uu[18]=nBins;uu[19]=nSpk;
     const uBuf=device.createBuffer({size:uf.byteLength, usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(uBuf,0,uf);
     const abs=roomGeom().edgeMat.map(k=>(ROOM_MATERIALS[k]||ROOM_MATERIALS.plaster).a);   // box: 4 edges S,E,N,W
@@ -325,8 +330,7 @@ async function roomTraceGPU(SR){
     await readBuf.mapAsync(GPUMapMode.READ); const raw=new Uint32Array(readBuf.getMappedRange().slice(0)); readBuf.unmap();
     const histL=[],histR=[]; for(let b=0;b<ROOM_NB;b++){ histL.push(new Float32Array(nBins)); histR.push(new Float32Array(nBins)); }
     for(let ch=0;ch<2;ch++) for(let b=0;b<ROOM_NB;b++){ const dst=(ch?histR:histL)[b], base=(ch*6+b)*nBins; for(let i=0;i<nBins;i++) dst[i]=raw[base+i]/1e6; }
-    const lis=[[lc[0]-ear,lc[1],lc[2]],[lc[0]+ear,lc[1],lc[2]]];
-    const coh=roomCoherentArrivals(srcs, lis);         // phase-accurate direct + 1st-order → interference
+    const coh=roomCoherentArrivals(srcs, ears);        // phase-accurate direct + 1st-order → interference
     return {L:histL,R:histR,nBins,sr:SR,coh,rays:total,gpu:true};
   }catch(e){ roomGPUok=false; return null; }
 }
@@ -349,6 +353,7 @@ function roomSoftCurve(){ const n=1024, cv=new Float32Array(n); for(let i=0;i<n;
    ===================================================================== */
 ENGINES.room = {
   id:'room', name:'Room', tagline:'Ray-traced room acoustics',
+  blurb:'Drop in any audio and put it inside a room you build. Rays fired from your speakers ricochet off the walls — each material soaking up the highs or throwing them back — and the impulse response they trace is convolved onto your sound. Move the speakers and the stereo mic to hear the space, its reflections, and the interference between them.',
   color:'#2fe08a', glow:'#9bffcf', implemented:true,
   paramsFor(d){ return {}; },
   // input → [dry] + [convolver(IR) → wet] → sum → soft-clip → master out

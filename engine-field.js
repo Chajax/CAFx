@@ -10,6 +10,7 @@ ENGINES.field = {
   id: 'field',
   name: 'Field',
   tagline: 'Open-air distance renderer',
+  blurb: 'Drop in any audio and walk it away from the stage. Distance rolls off the highs, swells the low end, soaks the tail in open-air reverb, and folds the crowd into the gaps — the way sound actually carries across a festival ground at night.',
   color: '#ff5e3a',          // orange — drives accent + ambient particles
   glow:  '#ffd166',
   implemented: true,

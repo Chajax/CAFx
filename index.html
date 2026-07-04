@@ -14,6 +14,8 @@
 <div class="panel">
   <div class="eyebrow" id="eyebrow">Open-air distance renderer</div>
   <h1><span id="h1name">Field</span><span>.</span></h1>
+  <p class="sub">Drop in any audio and walk it away from the stage. Distance rolls off the highs, swells the low end, soaks the tail in open-air reverb, and folds the crowd into the gaps — the way sound actually carries across a festival ground at night.</p>
+
   <div class="card" id="fxrsPanel">
     <div class="drop-label">FxRxS · Engine</div>
     <div class="engine-wheel-wrap">
@@ -470,8 +472,10 @@
       <div class="room-spk-list">
         <span class="room-spk active" style="cursor:default">🎙 Stereo mic <span class="lockbtn" id="micLock">🔓</span></span>
       </div>
-      <div class="room-xyz" style="grid-template-columns:1fr;margin-top:6px">
-        <div><span class="rl">Mic height <b id="lisZVal">32%</b></span><input type="range" id="lisZ" min="0" max="100" value="32"></div>
+      <div class="room-xyz" style="margin-top:6px">
+        <div><span class="rl">Height <b id="lisZVal">32%</b></span><input type="range" id="lisZ" min="0" max="100" value="32"></div>
+        <div><span class="rl">Rotation <b id="micAngVal">0°</b></span><input type="range" id="micAng" min="0" max="360" value="0" step="5"></div>
+        <div><span class="rl">Separation <b id="micSepVal">20cm</b></span><input type="range" id="micSep" min="2" max="100" value="20" step="1"></div>
       </div>
 
       <div class="pa" style="margin-top:14px"><div class="pa-top"><span class="pa-label">Detail — rays · bounces</span><span class="pa-val" id="roomQualVal">55%</span></div>

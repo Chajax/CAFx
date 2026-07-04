@@ -47,9 +47,10 @@ const els={
   roomSpkList:$('#roomSpkList'), roomSpkCount:$('#roomSpkCount'),
   roomWSl:$('#roomWSl'), roomWVal:$('#roomWVal'), roomLSl:$('#roomLSl'), roomLVal:$('#roomLVal'), roomHSl:$('#roomHSl'), roomHVal:$('#roomHVal'),
   srcZ:$('#srcZ'), srcZVal:$('#srcZVal'), lisZ:$('#lisZ'), lisZVal:$('#lisZVal'), micLock:$('#micLock'),
+  micAng:$('#micAng'), micAngVal:$('#micAngVal'), micSep:$('#micSep'), micSepVal:$('#micSepVal'),
   roomQual:$('#roomQual'), roomQualVal:$('#roomQualVal'), roomWetSl:$('#roomWetSl'), roomWetVal:$('#roomWetVal'), roomVolSl:$('#roomVolSl'), roomVolVal:$('#roomVolVal'),
   engineWheel:$('#engineWheel'), engineName:$('#engineName'), engineTag:$('#engineTag'),
-  engineSoon:$('#engineSoon'), eyebrow:$('#eyebrow'), h1name:$('#h1name')
+  engineSoon:$('#engineSoon'), eyebrow:$('#eyebrow'), h1name:$('#h1name'), sub:$('.sub')
 };
 
 // ---- UI feedback hooks the engine calls (keeps audio-engine.js DOM-free) ----
@@ -125,6 +126,7 @@ onEngineChange = function(engine){
   renderEngineWheel();
   els.h1name.textContent = engine.name;
   els.eyebrow.textContent = engine.tagline;
+  if(els.sub && engine.blurb) els.sub.textContent = engine.blurb;   // per-engine intro (Field's was legacy for all)
   els.engineName.textContent = engine.name;
   els.engineTag.textContent = engine.tagline;
   els.engineSoon.classList.toggle('hidden', engine.implemented);
@@ -1469,6 +1471,8 @@ bindRoomSlider(els.roomLSl, els.roomLVal, v=>roomL=v, v=>v+' m', true);
 bindRoomSlider(els.roomHSl, els.roomHVal, v=>roomH=v, v=>v+' m', true);
 bindSpkSlider(els.srcZ, els.srcZVal, 'z');                        // speaker/mic XY come from dragging; only height is a slider
 bindRoomSlider(els.lisZ, els.lisZVal, v=>roomLis.z=v/100, v=>v+'%', true);
+bindRoomSlider(els.micAng, els.micAngVal, v=>roomMicAngle=v, v=>v+'°', true);       // rotate the stereo axis
+bindRoomSlider(els.micSep, els.micSepVal, v=>roomMicSep=v/100, v=>v+'cm', true);    // L/R capsule separation
 bindRoomSlider(els.roomQual, els.roomQualVal, v=>roomQuality=v, v=>v+'%', true);
 bindRoomSlider(els.roomWetSl, els.roomWetVal, v=>roomWet=v, v=>v+'%', false);
 bindRoomSlider(els.roomVolSl, els.roomVolVal, v=>roomVol=v, v=>v+'%', false);
@@ -1540,15 +1544,17 @@ function drawRoomPlan(){
     cx.fillStyle='rgba(255,235,180,1)'; cx.beginPath(); cx.arc(q[0],q[1],sel?6:5,0,6.283); cx.fill();
     if(sel && roomSrcs.length>1){ cx.strokeStyle='rgba(255,235,180,0.9)'; cx.lineWidth=1.5; cx.beginPath(); cx.arc(q[0],q[1],9,0,6.283); cx.stroke(); }
     if(roomSrcs[i].lock) drawLockRing(cx,q[0],q[1],10); });
-  // stereo microphone (accent): centre + two capsules L/R along X (the engine's ±ear axis)
-  const lm=roomLisM(), lq=M2P(lm[0],lm[1]), ear=Math.min(0.12*(bb.maxx-bb.minx),0.18)*scale;
+  // stereo microphone (accent): centre + L/R capsules along the rotated axis, at the set separation
+  const lm=roomLisM(), lq=M2P(lm[0],lm[1]), ears=roomMicEars(), Lp=M2P(ears[0][0],ears[0][1]), Rp=M2P(ears[1][0],ears[1][1]);
   const lg=cx.createRadialGradient(lq[0],lq[1],0,lq[0],lq[1],12); lg.addColorStop(0,`rgba(${rgb},0.85)`); lg.addColorStop(1,`rgba(${rgb},0)`);
   cx.fillStyle=lg; cx.beginPath(); cx.arc(lq[0],lq[1],12,0,6.283); cx.fill();
-  const cap=Math.max(4,ear);
-  cx.strokeStyle=`rgba(${rgb},0.7)`; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(lq[0]-cap,lq[1]); cx.lineTo(lq[0]+cap,lq[1]); cx.stroke();
-  cx.fillStyle=`rgba(${rgb},1)`; [[-cap,'L'],[cap,'R']].forEach(([dx,lbl])=>{ cx.beginPath(); cx.arc(lq[0]+dx,lq[1],3.2,0,6.283); cx.fill(); });
-  cx.fillStyle=`rgba(${rgb},0.55)`; cx.font='8px "Spline Sans Mono",monospace'; cx.fillText('L',lq[0]-cap-6,lq[1]+3); cx.fillText('R',lq[0]+cap+2,lq[1]+3);
-  if(roomLis.lock) drawLockRing(cx,lq[0],lq[1],cap+4);
+  // forward tick (perpendicular to the L↔R axis) shows the rotation
+  const ar=roomMicAngle*Math.PI/180;
+  cx.strokeStyle=`rgba(${rgb},0.5)`; cx.lineWidth=1.2; cx.beginPath(); cx.moveTo(lq[0],lq[1]); cx.lineTo(lq[0]-Math.sin(ar)*13, lq[1]+Math.cos(ar)*13); cx.stroke();
+  cx.strokeStyle=`rgba(${rgb},0.7)`; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(Lp[0],Lp[1]); cx.lineTo(Rp[0],Rp[1]); cx.stroke();
+  cx.fillStyle=`rgba(${rgb},1)`; cx.beginPath(); cx.arc(Lp[0],Lp[1],3.4,0,6.283); cx.fill(); cx.beginPath(); cx.arc(Rp[0],Rp[1],3.4,0,6.283); cx.fill();
+  cx.fillStyle=`rgba(${rgb},0.55)`; cx.font='8px "Spline Sans Mono",monospace'; cx.fillText('L',Lp[0]-2,Lp[1]-5); cx.fillText('R',Rp[0]-2,Rp[1]-5);
+  if(roomLis.lock) drawLockRing(cx,lq[0],lq[1],14);
 }
 function planToM(px,py){ return planT?[(px-planT.ox)/planT.scale, (py-planT.oy)/planT.scale]:[0,0]; }
 function planP2(x,y){ return [planT.ox+x*planT.scale, planT.oy+y*planT.scale]; }
@@ -1609,6 +1615,7 @@ function roomRayPathPoly(S, dx,dy,dz, poly, H, bounces){
     if(hit===-1) break;
     px+=ddx*tH; py+=ddy*tH; pz+=ddz*tH; pts.push([px,py,pz]);
     if(hit<0) ddz=-ddz; else { const dot=ddx*nx+ddy*ny; ddx-=2*dot*nx; ddy-=2*dot*ny; }
+    px+=ddx*1e-4; py+=ddy*1e-4; pz+=ddz*1e-4;   // nudge inward so the next segment can't leak past an edge/corner
   }
   return pts;
 }
