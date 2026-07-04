@@ -17,21 +17,9 @@ const ROOM_AIR = [0.00035, 0.00069, 0.00115, 0.00219, 0.00426, 0.01117];  // Np/
 const ROOM_C = 343;                 // speed of sound m/s
 const ROOM_NB = 6;
 
-/* ---------- material library (6-band absorption α, 125…4k) ---------- */
-const ROOM_MATERIALS = {
-  concrete:{name:'Rough concrete',    a:[0.02,0.03,0.03,0.03,0.04,0.07]},
-  painted: {name:'Painted concrete',  a:[0.01,0.01,0.02,0.02,0.02,0.03]},
-  brick:   {name:'Unglazed brick',    a:[0.03,0.03,0.03,0.04,0.05,0.07]},
-  plaster: {name:'Plaster on lath',   a:[0.14,0.10,0.06,0.05,0.04,0.03]},
-  gypsum:  {name:'Gypsum board',      a:[0.29,0.10,0.05,0.04,0.07,0.09]},
-  glass:   {name:'Glass (large pane)',a:[0.18,0.06,0.04,0.03,0.02,0.02]},
-  wood:    {name:'Wooden floor',      a:[0.15,0.11,0.10,0.07,0.06,0.07]},
-  marble:  {name:'Marble / tile',     a:[0.01,0.01,0.01,0.01,0.02,0.02]},
-  carpet:  {name:'Heavy carpet',      a:[0.02,0.06,0.14,0.37,0.60,0.65]},
-  curtain: {name:'Heavy curtain',     a:[0.14,0.35,0.55,0.72,0.70,0.65]},
-  foam:    {name:'Acoustic foam 2in', a:[0.15,0.30,0.75,0.85,0.95,0.90]},
-  audience:{name:'Audience (seated)', a:[0.39,0.57,0.80,0.94,0.92,0.87]},
-};
+/* ---------- material library ----------
+   ROOM_MATERIALS (6-band absorption α, 125…4k) lives in room-materials.js,
+   loaded as a <script> before this file. Add/edit materials there. */
 const ROOM_WALL_NAMES = ['West','East','South','North','Floor','Ceiling'];
 
 /* ---------- state ---------- */
@@ -80,8 +68,8 @@ function roomClampPoly(x,y,poly){
   for(let k=0;k<10;k++){ p=[p[0]+(C[0]-p[0])*0.2, p[1]+(C[1]-p[1])*0.2]; if(roomInPoly(p[0],p[1],poly)) return p; }
   return C;                                                  // guaranteed-interior fallback
 }
-function roomFracToWorld(f){ const g=roomGeom(), bb=roomBBox(g.poly);
-  const X=bb.minx+f.x*(bb.maxx-bb.minx), Y=bb.miny+f.y*(bb.maxy-bb.miny), c=roomClampPoly(X,Y,g.poly);
+function roomFracToWorld(f){ const g=roomGeom(), bb=roomBBox(g.poly), m=0.03;   // keep off the walls (was on-wall in corners → rays leaked at t=0)
+  const X=bb.minx+(m+(1-2*m)*f.x)*(bb.maxx-bb.minx), Y=bb.miny+(m+(1-2*m)*f.y)*(bb.maxy-bb.miny), c=roomClampPoly(X,Y,g.poly);
   return [c[0], c[1], (0.06+0.88*f.z)*g.H]; }
 function roomSrcsM(){ return roomSrcs.map(roomFracToWorld); }
 function roomLisM(){ return roomFracToWorld(roomLis); }
