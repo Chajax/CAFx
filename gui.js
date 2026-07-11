@@ -712,15 +712,18 @@ function addRegion(){
 function loadFile(f){
   if(!f) return;
   fileName=f.name;
+  // create + unlock the AudioContext inside the user gesture (iOS needs this here, not later)
+  ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.resume) ctx.resume();
+  els.loaded.classList.remove('hidden'); els.loaded.innerHTML=`Loading <b>${fileName}</b>…`;
   const fr=new FileReader();
-  fr.onload=async e=>{
-    ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  fr.onerror=()=>{ els.loaded.innerHTML=`Couldn't read that file.`; };
+  fr.onload=e=>{
     const raw=e.target.result;
     // parse cues from a copy first — decodeAudioData detaches the buffer
     trackCues = parseWavCues(raw.slice(0));
-    try{
-      audioBuf=await ctx.decodeAudioData(raw);
-      els.loaded.classList.remove('hidden');
+    const onOK=buf=>{
+      audioBuf=buf;
       const cueNote = trackCues.length ? ` · <b>${trackCues.length} marker${trackCues.length>1?'s':''}</b> found` : '';
       els.loaded.innerHTML=`Loaded <b>${fileName}</b> · ${audioBuf.duration.toFixed(1)}s · ${audioBuf.numberOfChannels}ch${cueNote}`;
       els.controls.classList.remove('hidden');
@@ -728,10 +731,11 @@ function loadFile(f){
       updateTransport();    // enable play/render only if the active engine is built
       renderMarkerBar();
       drawField();
-    }catch(err){
-      els.loaded.classList.remove('hidden');
-      els.loaded.innerHTML=`Couldn't decode that file. Try a wav or mp3.`;
-    }
+    };
+    const onErr=()=>{ els.loaded.innerHTML=`Couldn't decode <b>${fileName}</b>. Try WAV, MP3, or M4A (FLAC isn't supported on iOS).`; };
+    // callback form of decodeAudioData — reliable on iOS Safari (the Promise form can hang there)
+    try{ const p=ctx.decodeAudioData(raw, onOK, onErr); if(p && p.catch) p.catch(onErr); }
+    catch(err){ onErr(); }
   };
   fr.readAsArrayBuffer(f);
 }
@@ -757,17 +761,20 @@ function renderBedList(){
 function loadCrowdFiles(files){
   if(!files || !files.length) return;
   ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.resume) ctx.resume();                       // unlock within the gesture (iOS)
   Array.from(files).forEach(f=>{
     const fr=new FileReader();
-    fr.onload=async e=>{
-      try{
-        const buf=await ctx.decodeAudioData(e.target.result);
+    fr.onload=e=>{
+      const onOK=buf=>{
         const id=++crowdSeq;
         crowdBeds.push({id, name:f.name, buffer:buf});
-        if(activeCrowd==null) activeCrowd=id; // first real bed becomes active
+        if(activeCrowd==null) activeCrowd=id;         // first real bed becomes active
         renderBedList();
         if(playing){stopPreview();startPreview();}
-      }catch(err){ /* skip undecodable file */ }
+      };
+      // callback form — reliable on iOS Safari
+      try{ const p=ctx.decodeAudioData(e.target.result, onOK, ()=>{}); if(p && p.catch) p.catch(()=>{}); }
+      catch(err){ /* skip undecodable file */ }
     };
     fr.readAsArrayBuffer(f);
   });

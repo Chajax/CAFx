@@ -31,7 +31,7 @@
   <div class="card">
     <div class="drop-label">01 · Source — the stage</div>
     <label class="drop" id="drop">
-      <input type="file" id="file" accept="audio/*">
+      <input type="file" id="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.mp4,.ogg,.oga,.opus,.aif,.aiff,.caf,.flac">
       <strong>Drop an audio file</strong>
       <em>or tap to browse — wav, mp3, flac, m4a</em>
     </label>
@@ -51,7 +51,7 @@
         </label>
       </div>
       <label class="drop crowd" id="dropCrowd">
-        <input type="file" id="fileCrowd" accept="audio/*" multiple>
+        <input type="file" id="fileCrowd" accept="audio/*,.wav,.mp3,.m4a,.aac,.mp4,.ogg,.oga,.opus,.aif,.aiff,.caf,.flac" multiple>
         <strong>Drop crowd recordings</strong>
         <em>add as many as you like — cheers, ambience, field noise</em>
       </label>
@@ -300,7 +300,7 @@
         </select>
         <input type="text" id="cheerTime" placeholder="0:00.0" inputmode="decimal">
         <button id="cheerAdd" class="add-cheer">+ Add</button>
-        <input type="file" id="cheerFile" accept="audio/*" hidden>
+        <input type="file" id="cheerFile" accept="audio/*,.wav,.mp3,.m4a,.aac,.mp4,.ogg,.oga,.opus,.aif,.aiff,.caf,.flac" hidden>
       </div>
       <div class="cheer-list" id="cheerList"></div>
       <div class="cheer-empty" id="cheerEmpty">No cheers yet. Pick a sound or upload a clip, set a timestamp like <b>1:24.5</b>, and add it. Each one gets processed by distance + rig just like the music.</div>

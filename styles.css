@@ -64,7 +64,7 @@
     box-shadow:0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
   }
   .drop{
-    display:block;
+    display:block;position:relative;
     border:1.5px dashed var(--line);border-radius:10px;
     padding:26px 18px;text-align:center;cursor:pointer;
     transition:border-color .2s,background .2s;
@@ -72,7 +72,10 @@
   .drop:hover,.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
   .drop strong{color:var(--ink);font-size:14px}
   .drop em{display:block;color:var(--ink-dim);font-style:normal;font-size:12px;margin-top:6px}
-  input[type=file]{display:none}
+  /* visually hidden, NOT display:none — iOS Safari won't open the picker for a
+     display:none file input (even via a wrapping label). */
+  input[type=file]{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden}
+  input[type=file][hidden]{display:none}   /* JS-triggered inputs (cheerFile) stay fully hidden */
 
   .loaded{font-size:12px;color:var(--ink-dim);margin-top:14px;word-break:break-all}
   .loaded b{color:var(--glow)}
