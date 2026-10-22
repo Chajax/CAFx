@@ -1,6 +1,4 @@
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;800&family=Spline+Sans+Mono:wght@400;500&display=swap');
-
-  :root{
+:root{
     --night:#0d1117;
     --night2:#161b22;
     --haze:#1f2733;
@@ -18,7 +16,7 @@
   body{
     background:radial-gradient(120% 90% at 50% -10%, #1a2230 0%, var(--night) 55%);
     color:var(--ink);
-    font-family:'Spline Sans Mono',monospace;
+    font-family: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
     min-height:100vh;
     display:flex;align-items:center;justify-content:center;
     padding:32px 18px;
